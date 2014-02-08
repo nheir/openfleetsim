@@ -91,7 +91,7 @@ int main(int argc, char* argv[])
 				rest.pertes[0][0] = rest.pertes[0][1] = rest.pertes[0][2] = rest.pertes[1][0] = rest.pertes[1][1] = rest.pertes[1][2]= 0; 
 				for(i = 0 ; i < tour ; i++)
 				{
-					simuler(*flottes[k], *flottes[l], res.pertes);
+					simuler(*flottes[k], *flottes[l], res.pertes, &f1, &f2);
 					for(j = 0 ; j < 3 ; j++)
 					{
 						rest.pertes[0][j] += res.pertes[0][j];
@@ -103,8 +103,13 @@ int main(int argc, char* argv[])
 				printf("%d vs %d\n", k+1, l+1);
 				printf("%ld\t%ld\t%ld\n", rest.pertes[0][0]/tour, rest.pertes[0][1]/tour, rest.pertes[0][2]/tour);
 				printf("%ld\t%ld\t%ld\n", rest.pertes[1][0]/tour, rest.pertes[1][1]/tour, rest.pertes[1][2]/tour);
-				printf("%d gagne avec un ecart de %d (%ld%%)\n", (sum[0] > sum[1]) ? l+1 : k+1,  abs(sum[0] - sum[1]), (abs(sum[0] - sum[1])*100)/(sum[0]+sum[0]));
+				printf("%d gagne avec un ecart de %d (%ld%%)\n\n", (sum[0] > sum[1]) ? l+1 : k+1,  abs(sum[0] - sum[1]), ((long)abs(sum[0] - sum[1])*100)/(sum[0]+sum[0]));
 			}
+		}
+		if(tour == 1)
+		{
+			afficherFlotte(&f1);
+			afficherFlotte(&f2);
 		}
 	}
 	else 
@@ -113,7 +118,7 @@ int main(int argc, char* argv[])
 		afficherFlotte(&f2);
 		for(i = 0 ; i < tour ; i++)
 		{
-			simuler(f1, f2, res.pertes);
+			simuler(f1, f2, res.pertes, NULL, NULL);
 			for(j = 0 ; j < 3 ; j++)
 			{
 				rest.pertes[0][j] += res.pertes[0][j];

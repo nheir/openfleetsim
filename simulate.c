@@ -5,19 +5,25 @@
 #include <stdlib.h>
 #include <string.h>
 
-int* etat1 = NULL;
-int* etat2 = NULL;
+int* degat1 = NULL;
+int* degat2 = NULL;
+int* bouclier1 = NULL;
+int* bouclier2 = NULL;
 
 void initEtat()
 {
-	if(etat1 == NULL) etat1 = malloc(NombreMaxDeVaisseaux*sizeof(int));
-	if(etat2 == NULL) etat2 = malloc(NombreMaxDeVaisseaux*sizeof(int));
+	if(degat1 == NULL) degat1 = malloc(NombreMaxDeVaisseaux*sizeof(int));
+	if(degat2 == NULL) degat2 = malloc(NombreMaxDeVaisseaux*sizeof(int));
+	if(bouclier1 == NULL) bouclier1 = malloc(NombreMaxDeVaisseaux*sizeof(int));
+	if(bouclier2 == NULL) bouclier2 = malloc(NombreMaxDeVaisseaux*sizeof(int));
 }
 
 void libererEtat()
 {
-	if(etat1 != NULL) free(etat1);
-	if(etat2 != NULL) free(etat2);
+	if(degat1 != NULL) free(degat1);
+	if(degat2 != NULL) free(degat2);
+	if(bouclier1 != NULL) free(bouclier1);
+	if(bouclier2 != NULL) free(bouclier2);
 }
 
 void initSimulateur()
@@ -32,7 +38,7 @@ void libererSimulateur()
 }
 
 
-void simuler(Flotte f1, Flotte f2, long pertes[2][3])
+void simuler(Flotte f1, Flotte f2, long pertes[2][3], Flotte *fr1, Flotte *fr2)
 {
 	int fl1[NombreDeVaisseaux] = {0};
 	int fl2[NombreDeVaisseaux] = {0};
@@ -61,15 +67,21 @@ void simuler(Flotte f1, Flotte f2, long pertes[2][3])
 	{
 		typeCible = i;
 		for( ; j < fl1[i] ; j++)
-			etat1[j] = (Caracteristiques[typeCible][0] * (10+f1.techno[0])) / 10; 
+		{
+			degat1[j] = (Caracteristiques[typeCible][0] * (10+f1.techno[0])) / 10;;
+			bouclier1[j] = Caracteristiques[typeCible][1] * (10+f1.techno[1]);//(Caracteristiques[typeCible][0] * (10+f1.techno[0])) / 10; 
+		}
 		for( ; k < fl2[i] ; k++)
-			etat2[k] = (Caracteristiques[typeCible][0] * (10+f2.techno[0])) / 10;
+		{
+			degat2[k] = (Caracteristiques[typeCible][0] * (10+f2.techno[0])) / 10;;
+			bouclier2[k] = Caracteristiques[typeCible][1] * (10+f2.techno[1]);//(Caracteristiques[typeCible][0] * (10+f2.techno[0])) / 10;
+		}
 	}
 
 	for(i = 0; i < 6; i++)
 	{
 		if(fl1[NombreDeVaisseaux-1] == 0 || fl2[NombreDeVaisseaux-1] == 0)
-			return;
+			break;
 
 		//Tir
 		// f1 -> f2
@@ -82,11 +94,15 @@ void simuler(Flotte f1, Flotte f2, long pertes[2][3])
 				cible = randInt(fl2[NombreDeVaisseaux-1]);
 				typeCible = getType(cible, fl2);
 				//printf("%d de type %d tire sur %d de type %d\n", j, typeTir, cible, typeCible);
-				etat2[cible] -= tirer(typeTir, f1.techno, typeCible, f2.techno);
+				bouclier2[cible] -= tirer(typeTir, f1.techno, bouclier2[cible]);
 				coque = (Caracteristiques[typeCible][0] * (10+f2.techno[0])) / 10;
-				bouclier = Caracteristiques[typeCible][1] * (10+f2.techno[1]);
-				if(estDetruit(coque, etat2[cible]+bouclier)) 
-					etat2[cible] = -bouclier;
+				if(bouclier2[cible] < 0)
+				{
+					degat2[cible] += bouclier2[cible];
+					bouclier2[cible] = 0;
+				}
+				if(estDetruit(coque, degat2[cible])) 
+					degat2[cible] = 0;
 				continuer = bernI(1,TirRapide[typeTir][typeCible]);
 			}
 		}
@@ -100,11 +116,15 @@ void simuler(Flotte f1, Flotte f2, long pertes[2][3])
 				cible = randInt(fl1[NombreDeVaisseaux-1]);
 				typeCible = getType(cible, fl1);
 				//printf("%d de type %d tire %d sur de type %d\n", j, typeTir, cible, typeCible);
-				etat1[cible] -= tirer(typeTir, f2.techno, typeCible, f1.techno);
+				bouclier1[cible] -= tirer(typeTir, f2.techno, bouclier1[cible]);
 				coque = (Caracteristiques[typeCible][0] * (10+f1.techno[0])) / 10;
-				bouclier = Caracteristiques[typeCible][1] * (10+f1.techno[1]);
-				if(estDetruit(coque, etat1[cible]+bouclier)) 
-					etat1[cible] = -bouclier;
+				if(bouclier1[cible] < 0)
+				{
+					degat1[cible] += bouclier1[cible];
+					bouclier1[cible] = 0;
+				}
+				if(estDetruit(coque, degat1[cible])) 
+					degat1[cible] = 0;
 				continuer = bernI(1,TirRapide[typeTir][typeCible]);
 			}
 		}
@@ -114,14 +134,17 @@ void simuler(Flotte f1, Flotte f2, long pertes[2][3])
 		for(j = 0 ; j < n ; j++)
 		{
 			typeCible = getType(j,fl1);
-			bouclier = Caracteristiques[typeCible][1] * (10+f1.techno[1]);
-			etat1[j] += bouclier;
-			if(etat1[j] <= 0)
+			if(degat1[j] <= 0)
 			{
 				pertes[0][0] += Couts[typeCible][0];
 				pertes[0][1] += Couts[typeCible][1];
 				pertes[0][2] += Couts[typeCible][2];
-				etat1[j] = 0;
+				bouclier1[j] = 0;
+			}
+			else
+			{
+				bouclier = Caracteristiques[typeCible][1] * (10+f1.techno[1]);
+				bouclier1[j] = bouclier;
 			}
 		}
 		n = fl2[NombreDeVaisseaux-1];
@@ -129,14 +152,17 @@ void simuler(Flotte f1, Flotte f2, long pertes[2][3])
 		for(j = 0 ; j < n ; j++)
 		{
 			typeCible = getType(j,fl2);
-			bouclier = Caracteristiques[typeCible][1] * (10+f2.techno[1]);
-			etat2[j] += bouclier;
-			if(etat2[j] <= 0)
+			if(degat2[j] <= 0)
 			{
 				pertes[1][0] += Couts[typeCible][0];
 				pertes[1][1] += Couts[typeCible][1];
 				pertes[1][2] += Couts[typeCible][2];
-				etat2[j] = 0;
+				bouclier2[j] = 0;
+			}
+			else
+			{
+				bouclier = Caracteristiques[typeCible][1] * (10+f2.techno[1]);
+				bouclier2[j] = bouclier;
 			}
 		}
 		// Nettoyage
@@ -147,11 +173,12 @@ void simuler(Flotte f1, Flotte f2, long pertes[2][3])
 			typeCible = n;
 			for( ; j < fl1[n] ; j++)
 			{
-				if(etat1[j] == 0)
+				if(bouclier1[j] == 0)
 					l++;
 				else
 				{
-					etat1[k] = etat1[j];
+					degat1[k] = degat1[j];
+					bouclier1[k] = bouclier1[j];
 					k++;
 				}
 			}
@@ -164,15 +191,34 @@ void simuler(Flotte f1, Flotte f2, long pertes[2][3])
 			typeCible = n;
 			for( ; j < fl2[n] ; j++)
 			{
-				if(etat2[j] == 0)
+				if(bouclier2[j] == 0)
 					l++;
 				else
 				{
-					etat2[k] = etat2[j];
+					degat2[k] = degat2[j];
+					bouclier2[k] = bouclier2[j];
 					k++;
 				}
 			}
 			fl2[n] -= l;
+		}
+	}
+	if(fr1 != NULL)
+	{
+		fr1->nbTotalVaisseaux = fl1[NombreDeVaisseaux-1];
+		fr1->nbVaisseaux[0] = fl1[0];
+		for(i = 1 ; i < NombreDeVaisseaux ; i++)
+		{
+			fr1->nbVaisseaux[i] = fl1[i] - fl1[i-1];
+		}
+	}
+	if(fr2 != NULL)
+	{
+		fr2->nbTotalVaisseaux = fl2[NombreDeVaisseaux-1];
+		fr2->nbVaisseaux[0] = fl2[0];
+		for(i = 1 ; i < NombreDeVaisseaux ; i++)
+		{
+			fr2->nbVaisseaux[i] = fl2[i] - fl2[i-1];
 		}
 	}
 }
@@ -186,11 +232,10 @@ int estDetruit(int coque, int reste)
 	return r > 0;
 }
 
-int tirer(int t1, int tech1[3], int t2, int tech2[3])
+int tirer(int t1, int tech1[3], int bouclier)
 {
-	int force, bouclier;
+	int force;
 	force = Caracteristiques[t1][2] * (10+tech1[2]);
-	bouclier = Caracteristiques[t2][1] * (10+tech2[1]);
 	if(bouclier > force*100)
 		return 0;
 	return force;
